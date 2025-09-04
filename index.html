@@ -1,0 +1,1452 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB Utility Demo - Chrome >= 53</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border: 2px solid #f0f0f0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .controls > * {
+            margin-right: 15px;
+            margin-bottom: 10px;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .input-group > * {
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+        
+        input, select {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+        
+        .output {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        
+        .log-success {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        
+        .log-error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .log-info {
+            background: #d1ecf1;
+            border-left-color: #17a2b8;
+            color: #0c5460;
+        }
+        
+        .log-warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+        
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .stats > * {
+            margin-right: 20px;
+            margin-bottom: 20px;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            border-top: 4px solid #2196F3;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .compatibility {
+            background: #e8f5e8;
+            border: 2px solid #4caf50;
+            color: #2e7d32;
+        }
+        
+        .compatibility.unsupported {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .input-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗄️ IndexedDB Utility Demo</h1>
+            <p>Interactive demonstration with IndexedDB library for Chrome >= 53</p>
+        </div>
+        
+        <div class="content">
+            <!-- Browser Compatibility -->
+            <div class="section compatibility" id="compatibility">
+                <h2>🌐 Browser Compatibility Check</h2>
+                <div id="compatibility-info">
+                    <p>Checking...</p>
+                </div>
+            </div>
+            
+            <!-- Database Operations -->
+            <div class="section">
+                <h2>🏗️ Database Management</h2>
+                <div class="controls">
+                    <button onclick="initDatabase()">Initialize Database</button>
+                    <button onclick="deleteDatabase()">Delete Database</button>
+                    <button onclick="getDatabaseInfo()">Database Info</button>
+                </div>
+                <div class="output" id="db-output"></div>
+            </div>
+            
+            <!-- User Management -->
+            <div class="section">
+                <h2>👥 User Management</h2>
+                <div class="input-group">
+                    <input type="text" id="userName" placeholder="User name" />
+                    <input type="email" id="userEmail" placeholder="Email" />
+                    <input type="number" id="userAge" placeholder="Age" min="1" max="120" />
+                    <select id="userRole" title="Select user role">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                        <option value="moderator">Moderator</option>
+                    </select>
+                </div>
+                <div class="controls">
+                    <button onclick="addUser()">Add User</button>
+                    <button onclick="getAllUsers()">Get All Users</button>
+                    <button onclick="searchUserByEmail()">Search by Email</button>
+                    <button onclick="updateRandomUser()">Update Random User</button>
+                    <button onclick="deleteRandomUser()">Delete Random User</button>
+                    <button onclick="clearUsers()">Clear All Users</button>
+                </div>
+                <div class="output" id="user-output"></div>
+            </div>
+            
+            <!-- Post Management -->
+            <div class="section">
+                <h2>📝 Post Management</h2>
+                <div class="input-group">
+                    <input type="text" id="postTitle" placeholder="Post title" />
+                    <input type="text" id="postContent" placeholder="Content" />
+                    <select id="postCategory" title="Select post category">
+                        <option value="technology">Technology</option>
+                        <option value="lifestyle">Lifestyle</option>
+                        <option value="travel">Travel</option>
+                        <option value="food">Food</option>
+                    </select>
+                    <select id="postStatus" title="Select post status">
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                    </select>
+                </div>
+                <div class="controls">
+                    <button onclick="addPost()">Add Post</button>
+                    <button onclick="getAllPosts()">Get All Posts</button>
+                    <button onclick="getPublishedPosts()">Published Posts</button>
+                    <button onclick="getDraftPosts()">Draft Posts</button>
+                    <button onclick="publishRandomDraft()">Publish Random Draft</button>
+                    <button onclick="bulkAddPosts()">Bulk Add Posts</button>
+                </div>
+                <div class="output" id="post-output"></div>
+            </div>
+            
+            <!-- Advanced Operations -->
+            <div class="section">
+                <h2>🔍 Advanced Operations</h2>
+                <div class="controls">
+                    <button onclick="queryWithLimit()">Query with Limit</button>
+                    <button onclick="queryByIndex()">Query by Index</button>
+                    <button onclick="countRecords()">Count Records</button>
+                    <button onclick="transactionDemo()">Transaction Demo</button>
+                    <button onclick="performanceTest()">Performance Test</button>
+                    <button onclick="clearAllData()">Clear All Data</button>
+                </div>
+                <div class="output" id="advanced-output"></div>
+            </div>
+            
+            <!-- Statistics -->
+            <div class="section">
+                <h2>📊 Statistics</h2>
+                <button onclick="updateStats()">Update Statistics</button>
+                <div class="stats" id="stats">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load demo script for Chrome >= 53 compatibility -->
+    <script src="demo-script.js"></script>
+    <script>
+        // Simple polyfill for older browsers
+        if (!window.Promise) {
+            console.error('Promise not supported. Please use a modern browser.');
+        }
+        
+        // Global database configuration
+        window.dbConfig = {
+            name: 'DemoApp',
+            version: 1,
+            stores: [
+                {
+                    name: 'users',
+                    config: { keyPath: 'id', autoIncrement: true },
+                    indices: [
+                        { name: 'email', keyPath: 'email', options: { unique: true } },
+                        { name: 'role', keyPath: 'role' },
+                        { name: 'age', keyPath: 'age' },
+                        { name: 'createdAt', keyPath: 'createdAt' }
+                    ]
+                },
+                {
+                    name: 'posts',
+                    config: { keyPath: 'id', autoIncrement: true },
+                    indices: [
+                        { name: 'authorId', keyPath: 'authorId' },
+                        { name: 'status', keyPath: 'status' },
+                        { name: 'category', keyPath: 'category' },
+                        { name: 'createdAt', keyPath: 'createdAt' }
+                    ]
+                }
+            ]
+        };
+        
+        // Utility functions
+        function log(message, type, outputId) {
+            type = type || 'info';
+            outputId = outputId || 'db-output';
+            var output = document.getElementById(outputId);
+            var timestamp = new Date().toLocaleTimeString();
+            var logEntry = document.createElement('div');
+            logEntry.className = 'log-entry log-' + type;
+            logEntry.textContent = '[' + timestamp + '] ' + message;
+            output.appendChild(logEntry);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function clearOutput(outputId) {
+            document.getElementById(outputId).innerHTML = '';
+        }
+        
+        function getRandomItem(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            var k = 1024;
+            var sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            var i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Check if IndexedDB is supported
+        function isIndexedDBSupported() {
+            return typeof window !== 'undefined' && 
+                   'indexedDB' in window && 
+                   indexedDB !== null && 
+                   typeof indexedDB.open === 'function';
+        }
+        
+        function getBrowserCompatibility() {
+            if (!isIndexedDBSupported()) {
+                return { supported: false, features: {} };
+            }
+            
+            var features = {
+                transactions: typeof IDBTransaction !== 'undefined',
+                cursors: typeof IDBCursor !== 'undefined',
+                keyRange: typeof IDBKeyRange !== 'undefined',
+                multiEntry: true,
+                compound: true
+            };
+            
+            return { supported: true, features: features };
+        }
+        
+        // Simple IndexedDB wrapper for demo (Chrome >= 53 compatible)
+        function SimpleIndexedDBUtil(config) {
+            this.dbName = config.name;
+            this.dbVersion = config.version;
+            this.stores = config.stores;
+            this.db = null;
+        }
+        
+        SimpleIndexedDBUtil.prototype.init = function() {
+            var self = this;
+            return new Promise(function(resolve, reject) {
+                if (!isIndexedDBSupported()) {
+                    reject(new Error('IndexedDB is not supported in this browser!'));
+                    return;
+                }
+                
+                var request = indexedDB.open(self.dbName, self.dbVersion);
+                
+                request.onupgradeneeded = function(event) {
+                    var db = event.target.result;
+                    
+                    if (self.stores && self.stores.length) {
+                        self.stores.forEach(function(store) {
+                            var objectStore;
+                            
+                            if (!db.objectStoreNames.contains(store.name)) {
+                                objectStore = db.createObjectStore(store.name, store.config);
+                            } else {
+                                objectStore = event.target.transaction.objectStore(store.name);
+                            }
+                            
+                            if (store.indices && store.indices.length) {
+                                store.indices.forEach(function(indexConfig) {
+                                    if (!objectStore.indexNames.contains(indexConfig.name)) {
+                                        objectStore.createIndex(
+                                            indexConfig.name,
+                                            indexConfig.keyPath,
+                                            indexConfig.options
+                                        );
+                                    }
+                                });
+                            }
+                        });
+                    }
+                };
+                
+                request.onsuccess = function(event) {
+                    self.db = event.target.result;
+                    resolve(self.db);
+                };
+                
+                request.onerror = function() {
+                    reject(new Error(request.error ? request.error.message : 'Failed to open database'));
+                };
+                
+                request.onblocked = function() {
+                    reject(new Error('Database open request was blocked'));
+                };
+            });
+        };
+        
+        SimpleIndexedDBUtil.prototype.getDB = function() {
+            if (!this.db) {
+                throw new Error('Database not initialized. Call init() first.');
+            }
+            return this.db;
+        };
+        
+        SimpleIndexedDBUtil.prototype.getAll = function(storeName) {
+            var self = this;
+            return new Promise(function(resolve, reject) {
+                var transaction = self.getDB().transaction([storeName], 'readonly');
+                var store = transaction.objectStore(storeName);
+                var request = store.getAll();
+                
+                request.onsuccess = function() {
+                    resolve(request.result);
+                };
+                
+                request.onerror = function() {
+                    reject(new Error(request.error ? request.error.message : 'Failed to retrieve data'));
+                };
+            });
+        };
+        
+        SimpleIndexedDBUtil.prototype.add = function(storeName, data) {
+            var self = this;
+            return new Promise(function(resolve, reject) {
+                var transaction = self.getDB().transaction([storeName], 'readwrite');
+                var store = transaction.objectStore(storeName);
+                var request = store.add(data);
+                
+                request.onsuccess = function() {
+                    resolve(request.result);
+                };
+                
+                request.onerror = function() {
+                    reject(new Error(request.error ? request.error.message : 'Failed to add data'));
+                };
+            });
+        };
+        
+        SimpleIndexedDBUtil.prototype.put = function(storeName, data) {
+            var self = this;
+            return new Promise(function(resolve, reject) {
+                var transaction = self.getDB().transaction([storeName], 'readwrite');
+                var store = transaction.objectStore(storeName);
+                var request = store.put(data);
+                
+                request.onsuccess = function() {
+                    resolve(request.result);
+                };
+                
+                request.onerror = function() {
+                    reject(new Error(request.error ? request.error.message : 'Failed to put data'));
+                };
+            });
+        };
+        
+        SimpleIndexedDBUtil.prototype.delete = function(storeName, key) {
+            var self = this;
+            return new Promise(function(resolve, reject) {
+                var transaction = self.getDB().transaction([storeName], 'readwrite');
+                var store = transaction.objectStore(storeName);
+                
+                // First get the object
+                var getRequest = store.get(key);
+                getRequest.onsuccess = function() {
+                    var deletedObject = getRequest.result;
+                    
+                    if (!deletedObject) {
+                        reject(new Error('Object with key "' + key + '" not found'));
+                        return;
+                    }
+                    
+                    // Then delete it
+                    var deleteRequest = store.delete(key);
+                    deleteRequest.onsuccess = function() {
+                        // Get remaining objects
+                        var getAllRequest = store.getAll();
+                        getAllRequest.onsuccess = function() {
+                            resolve([deletedObject, getAllRequest.result]);
+                        };
+                        getAllRequest.onerror = function() {
+                            reject(new Error('Failed to get remaining objects'));
+                        };
+                    };
+                    deleteRequest.onerror = function() {
+                        reject(new Error('Failed to delete object'));
+                    };
+                };
+                getRequest.onerror = function() {
+                    reject(new Error('Failed to retrieve object for deletion'));
+                };
+            });
+        };
+        
+        SimpleIndexedDBUtil.prototype.clear = function(storeName) {
+            var self = this;
+            return new Promise(function(resolve, reject) {
+                var transaction = self.getDB().transaction([storeName], 'readwrite');
+                var store = transaction.objectStore(storeName);
+                var request = store.clear();
+                
+                request.onsuccess = function() {
+                    resolve();
+                };
+                
+                request.onerror = function() {
+                    reject(new Error(request.error ? request.error.message : 'Failed to clear store'));
+                };
+            });
+        };
+        
+        SimpleIndexedDBUtil.prototype.count = function(storeName) {
+            var self = this;
+            return new Promise(function(resolve, reject) {
+                var transaction = self.getDB().transaction([storeName], 'readonly');
+                var store = transaction.objectStore(storeName);
+                var request = store.count();
+                
+                request.onsuccess = function() {
+                    resolve(request.result);
+                };
+                
+                request.onerror = function() {
+                    reject(new Error(request.error ? request.error.message : 'Failed to count objects'));
+                };
+            });
+        };
+        
+        SimpleIndexedDBUtil.prototype.query = function(storeName, options) {
+            options = options || {};
+            var self = this;
+            return new Promise(function(resolve, reject) {
+                var transaction = self.getDB().transaction([storeName], 'readonly');
+                var store = transaction.objectStore(storeName);
+                var source = options.index ? store.index(options.index) : store;
+                var results = [];
+                var skipped = 0;
+                var counted = 0;
+                var offset = options.offset || 0;
+                var limit = options.limit;
+                var direction = options.direction || 'next';
+                
+                var request = source.openCursor(undefined, direction);
+                
+                request.onsuccess = function() {
+                    var cursor = request.result;
+                    
+                    if (!cursor) {
+                        resolve(results);
+                        return;
+                    }
+                    
+                    if (skipped < offset) {
+                        skipped++;
+                        cursor.continue();
+                        return;
+                    }
+                    
+                    if (limit && counted >= limit) {
+                        resolve(results);
+                        return;
+                    }
+                    
+                    results.push(cursor.value);
+                    counted++;
+                    cursor.continue();
+                };
+                
+                request.onerror = function() {
+                    reject(new Error(request.error ? request.error.message : 'Query failed'));
+                };
+            });
+        };
+        
+        SimpleIndexedDBUtil.prototype.bulkAdd = function(storeName, dataArray) {
+            var self = this;
+            return new Promise(function(resolve, reject) {
+                if (!dataArray || dataArray.length === 0) {
+                    resolve([]);
+                    return;
+                }
+                
+                var transaction = self.getDB().transaction([storeName], 'readwrite');
+                var store = transaction.objectStore(storeName);
+                var results = [];
+                var completed = 0;
+                
+                dataArray.forEach(function(data, index) {
+                    var request = store.add(data);
+                    
+                    request.onsuccess = function() {
+                        results[index] = request.result;
+                        completed++;
+                        
+                        if (completed === dataArray.length) {
+                            resolve(results);
+                        }
+                    };
+                    
+                    request.onerror = function() {
+                        reject(new Error('Failed to add item at index ' + index));
+                    };
+                });
+            });
+        };
+        
+        SimpleIndexedDBUtil.prototype.close = function() {
+            if (this.db) {
+                this.db.close();
+                this.db = null;
+            }
+        };
+        
+        SimpleIndexedDBUtil.deleteDatabase = function(name) {
+            return new Promise(function(resolve, reject) {
+                var deleteRequest = indexedDB.deleteDatabase(name);
+                
+                deleteRequest.onsuccess = function() {
+                    resolve();
+                };
+                
+                deleteRequest.onerror = function() {
+                    reject(new Error(deleteRequest.error ? deleteRequest.error.message : 'Failed to delete database'));
+                };
+                
+                deleteRequest.onblocked = function() {
+                    reject(new Error('Database deletion was blocked'));
+                };
+            });
+        };
+        
+        // Make the utility available globally
+        window.SimpleIndexedDBUtil = SimpleIndexedDBUtil;
+        
+        // Check browser compatibility
+        function checkCompatibility() {
+            var compatibilityDiv = document.getElementById('compatibility');
+            var infoDiv = document.getElementById('compatibility-info');
+            
+            if (isIndexedDBSupported()) {
+                var compatibility = getBrowserCompatibility();
+                compatibilityDiv.className = 'section compatibility';
+                var featuresText = Object.keys(compatibility.features).map(function(key) {
+                    return key + ': ' + (compatibility.features[key] ? '✅' : '❌');
+                }).join(', ');
+                
+                infoDiv.innerHTML = '<p><strong>✅ IndexedDB is supported!</strong></p>' +
+                    '<p>Browser: ' + (navigator.userAgent.indexOf('Chrome') !== -1 ? 'Chrome' : 'Other') + '</p>' +
+                    '<p>Supported features: ' + featuresText + '</p>';
+            } else {
+                compatibilityDiv.className = 'section compatibility unsupported';
+                infoDiv.innerHTML = '<p><strong>❌ IndexedDB is not supported!</strong></p>';
+            }
+        }
+        
+        // Database operations
+        window.initDatabase = function() {
+            clearOutput('db-output');
+            log('Initializing database...', 'info', 'db-output');
+            
+            window.dbUtil = new SimpleIndexedDBUtil(window.dbConfig);
+            
+            window.dbUtil.init().then(function() {
+                log('✅ Database initialized successfully!', 'success', 'db-output');
+                log('Database: ' + window.dbConfig.name + ', Version: ' + window.dbConfig.version, 'info', 'db-output');
+                log('Stores: ' + window.dbConfig.stores.map(function(s) { return s.name; }).join(', '), 'info', 'db-output');
+                updateStats();
+            }).catch(function(error) {
+                log('❌ Database initialization error: ' + error.message, 'error', 'db-output');
+            });
+        };
+        
+        window.deleteDatabase = function() {
+            clearOutput('db-output');
+            if (window.dbUtil) {
+                window.dbUtil.close();
+                window.dbUtil = null;
+            }
+            
+            SimpleIndexedDBUtil.deleteDatabase(window.dbConfig.name).then(function() {
+                log('✅ Database deleted!', 'success', 'db-output');
+                updateStats();
+            }).catch(function(error) {
+                log('❌ Database deletion error: ' + error.message, 'error', 'db-output');
+            });
+        };
+        
+        window.getDatabaseInfo = function() {
+            clearOutput('db-output');
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'db-output');
+                return;
+            }
+            
+            var db = window.dbUtil.getDB();
+            log('Database: ' + db.name, 'info', 'db-output');
+            log('Version: ' + db.version, 'info', 'db-output');
+            log('Object Stores: ' + Array.from(db.objectStoreNames).join(', '), 'info', 'db-output');
+        };
+        
+        // User operations
+        window.addUser = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'user-output');
+                return;
+            }
+            
+            var name = document.getElementById('userName').value.trim();
+            var email = document.getElementById('userEmail').value.trim();
+            var age = parseInt(document.getElementById('userAge').value);
+            var role = document.getElementById('userRole').value;
+            
+            if (!name || !email || !age) {
+                log('❌ Please fill in all fields!', 'error', 'user-output');
+                return;
+            }
+            
+            var userData = {
+                name: name,
+                email: email,
+                age: age,
+                role: role,
+                createdAt: new Date(),
+                profile: {
+                    avatar: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name) + '&background=2196F3&color=fff',
+                    bio: 'Hello, I am ' + name + '!'
+                }
+            };
+            
+            window.dbUtil.add('users', userData).then(function() {
+                log('✅ User added: ' + name + ' (' + email + ')', 'success', 'user-output');
+                
+                // Clear form
+                document.getElementById('userName').value = '';
+                document.getElementById('userEmail').value = '';
+                document.getElementById('userAge').value = '';
+                
+                updateStats();
+            }).catch(function(error) {
+                log('❌ Error adding user: ' + error.message, 'error', 'user-output');
+            });
+        };
+        
+        window.getAllUsers = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'user-output');
+                return;
+            }
+            
+            window.dbUtil.getAll('users').then(function(users) {
+                clearOutput('user-output');
+                log('📋 Found ' + users.length + ' users:', 'info', 'user-output');
+                
+                users.forEach(function(user, index) {
+                    log((index + 1) + '. ' + user.name + ' (' + user.email + ') - ' + user.role + ' - Age: ' + user.age, 'info', 'user-output');
+                });
+                
+                if (users.length === 0) {
+                    log('No users found in database.', 'warning', 'user-output');
+                }
+            }).catch(function(error) {
+                log('❌ Error getting users: ' + error.message, 'error', 'user-output');
+            });
+        };
+        
+        window.searchUserByEmail = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'user-output');
+                return;
+            }
+            
+            var email = document.getElementById('userEmail').value.trim();
+            if (!email) {
+                log('❌ Please enter an email to search!', 'error', 'user-output');
+                return;
+            }
+            
+            window.dbUtil.query('users', { index: 'email' }).then(function(users) {
+                var user = users.find(function(u) { return u.email === email; });
+                
+                clearOutput('user-output');
+                if (user) {
+                    log('✅ User found: ' + user.name + ' (' + user.email + ') - ' + user.role, 'success', 'user-output');
+                    log('Age: ' + user.age + ', Created: ' + new Date(user.createdAt).toLocaleString(), 'info', 'user-output');
+                } else {
+                    log('❌ No user found with email: ' + email, 'warning', 'user-output');
+                }
+            }).catch(function(error) {
+                log('❌ Error searching user: ' + error.message, 'error', 'user-output');
+            });
+        };
+        
+        window.updateRandomUser = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'user-output');
+                return;
+            }
+            
+            window.dbUtil.getAll('users').then(function(users) {
+                if (users.length === 0) {
+                    log('❌ No users to update!', 'warning', 'user-output');
+                    return;
+                }
+                
+                var randomUser = getRandomItem(users);
+                var updatedUser = {
+                    id: randomUser.id,
+                    name: randomUser.name,
+                    email: randomUser.email,
+                    age: randomUser.age + 1,
+                    role: randomUser.role,
+                    createdAt: randomUser.createdAt,
+                    updatedAt: new Date(),
+                    profile: {
+                        avatar: randomUser.profile.avatar,
+                        bio: randomUser.profile.bio + ' (Updated)'
+                    }
+                };
+                
+                return window.dbUtil.put('users', updatedUser).then(function() {
+                    log('✅ User updated: ' + randomUser.name + ' (age: ' + randomUser.age + ' → ' + updatedUser.age + ')', 'success', 'user-output');
+                });
+            }).catch(function(error) {
+                log('❌ Error updating user: ' + error.message, 'error', 'user-output');
+            });
+        };
+        
+        window.deleteRandomUser = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'user-output');
+                return;
+            }
+            
+            window.dbUtil.getAll('users').then(function(users) {
+                if (users.length === 0) {
+                    log('❌ No users to delete!', 'warning', 'user-output');
+                    return;
+                }
+                
+                var randomUser = getRandomItem(users);
+                return window.dbUtil.delete('users', randomUser.id).then(function(result) {
+                    var deletedUser = result[0];
+                    log('✅ User deleted: ' + deletedUser.name + ' (' + deletedUser.email + ')', 'success', 'user-output');
+                    updateStats();
+                });
+            }).catch(function(error) {
+                log('❌ Error deleting user: ' + error.message, 'error', 'user-output');
+            });
+        };
+        
+        window.clearUsers = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'user-output');
+                return;
+            }
+            
+            window.dbUtil.clear('users').then(function() {
+                log('✅ All users cleared!', 'success', 'user-output');
+                updateStats();
+            }).catch(function(error) {
+                log('❌ Error clearing users: ' + error.message, 'error', 'user-output');
+            });
+        };
+        
+        // Post operations
+        window.addPost = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'post-output');
+                return;
+            }
+            
+            var title = document.getElementById('postTitle').value.trim();
+            var content = document.getElementById('postContent').value.trim();
+            var category = document.getElementById('postCategory').value;
+            var status = document.getElementById('postStatus').value;
+            
+            if (!title || !content) {
+                log('❌ Please enter title and content!', 'error', 'post-output');
+                return;
+            }
+            
+            // Get a random user as author
+            window.dbUtil.getAll('users').then(function(users) {
+                if (users.length === 0) {
+                    log('❌ Need to create users before creating posts!', 'error', 'post-output');
+                    return;
+                }
+                
+                var author = getRandomItem(users);
+                var postData = {
+                    title: title,
+                    content: content,
+                    category: category,
+                    status: status,
+                    authorId: author.id,
+                    authorName: author.name,
+                    createdAt: new Date(),
+                    tags: [category, 'demo'],
+                    viewCount: 0,
+                    likeCount: Math.floor(Math.random() * 100)
+                };
+                
+                if (status === 'published') {
+                    postData.publishedAt = new Date();
+                }
+                
+                return window.dbUtil.add('posts', postData).then(function() {
+                    log('✅ Post added: "' + title + '" by ' + author.name, 'success', 'post-output');
+                    
+                    // Clear form
+                    document.getElementById('postTitle').value = '';
+                    document.getElementById('postContent').value = '';
+                    
+                    updateStats();
+                });
+            }).catch(function(error) {
+                log('❌ Error adding post: ' + error.message, 'error', 'post-output');
+            });
+        };
+        
+        window.getAllPosts = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'post-output');
+                return;
+            }
+            
+            window.dbUtil.getAll('posts').then(function(posts) {
+                clearOutput('post-output');
+                log('📝 Found ' + posts.length + ' posts:', 'info', 'post-output');
+                
+                posts.forEach(function(post, index) {
+                    log((index + 1) + '. "' + post.title + '" - ' + post.status + ' - ' + post.category + ' - by ' + post.authorName, 'info', 'post-output');
+                });
+                
+                if (posts.length === 0) {
+                    log('No posts found in database.', 'warning', 'post-output');
+                }
+            }).catch(function(error) {
+                log('❌ Error getting posts: ' + error.message, 'error', 'post-output');
+            });
+        };
+        
+        window.getPublishedPosts = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'post-output');
+                return;
+            }
+            
+            window.dbUtil.query('posts', { index: 'status' }).then(function(posts) {
+                var publishedPosts = posts.filter(function(post) { return post.status === 'published'; });
+                
+                clearOutput('post-output');
+                log('📢 Found ' + publishedPosts.length + ' published posts:', 'info', 'post-output');
+                
+                publishedPosts.forEach(function(post, index) {
+                    log((index + 1) + '. "' + post.title + '" - ' + post.category + ' - by ' + post.authorName, 'info', 'post-output');
+                    if (post.publishedAt) {
+                        log('   Xuất bản: ' + new Date(post.publishedAt).toLocaleString(), 'info', 'post-output');
+                    }
+                });
+            }).catch(function(error) {
+                log('❌ Lỗi lấy published posts: ' + error.message, 'error', 'post-output');
+            });
+        };
+        
+        window.getDraftPosts = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'post-output');
+                return;
+            }
+            
+            window.dbUtil.query('posts', { index: 'status' }).then(function(posts) {
+                var drafts = posts.filter(function(post) { return post.status === 'draft'; });
+                
+                clearOutput('post-output');
+                log('📝 Found ' + drafts.length + ' draft posts:', 'info', 'post-output');
+                
+                drafts.forEach(function(post, index) {
+                    log((index + 1) + '. "' + post.title + '" - ' + post.category + ' - by ' + post.authorName, 'info', 'post-output');
+                });
+            }).catch(function(error) {
+                log('❌ Lỗi lấy draft posts: ' + error.message, 'error', 'post-output');
+            });
+        };
+        
+        window.publishRandomDraft = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'post-output');
+                return;
+            }
+            
+            window.dbUtil.query('posts', { index: 'status' }).then(function(posts) {
+                var drafts = posts.filter(function(post) { return post.status === 'draft'; });
+                
+                if (drafts.length === 0) {
+                    log('❌ Không có draft posts để xuất bản!', 'warning', 'post-output');
+                    return;
+                }
+                
+                var randomDraft = getRandomItem(drafts);
+                var publishedPost = {
+                    id: randomDraft.id,
+                    title: randomDraft.title,
+                    content: randomDraft.content,
+                    category: randomDraft.category,
+                    status: 'published',
+                    authorId: randomDraft.authorId,
+                    authorName: randomDraft.authorName,
+                    createdAt: randomDraft.createdAt,
+                    publishedAt: new Date(),
+                    updatedAt: new Date(),
+                    tags: randomDraft.tags,
+                    viewCount: randomDraft.viewCount,
+                    likeCount: randomDraft.likeCount
+                };
+                
+                return window.dbUtil.put('posts', publishedPost).then(function() {
+                    log('✅ Post published: "' + randomDraft.title + '"', 'success', 'post-output');
+                    updateStats();
+                });
+            }).catch(function(error) {
+                log('❌ Lỗi xuất bản post: ' + error.message, 'error', 'post-output');
+            });
+        };
+        
+        window.bulkAddPosts = function() {
+            if (!window.dbUtil) {
+                log('❌ Database not initialized!', 'error', 'post-output');
+                return;
+            }
+            
+            window.dbUtil.getAll('users').then(function(users) {
+                if (users.length === 0) {
+                    log('❌ Cần tạo user trước khi tạo posts!', 'error', 'post-output');
+                    return;
+                }
+                
+                var categories = ['technology', 'lifestyle', 'travel', 'food'];
+                var statuses = ['draft', 'published'];
+                var sampleTitles = [
+                    'Hướng dẫn sử dụng IndexedDB',
+                    'Tips để tối ưu performance',
+                    'Du lịch Việt Nam mùa hè',
+                    'Món ăn truyền thống',
+                    'Công nghệ mới nhất 2025',
+                    'Lifestyle hiện đại',
+                    'Khám phá thế giới',
+                    'Nấu ăn tại nhà'
+                ];
+                
+                var bulkPosts = [];
+                for (var i = 0; i < 5; i++) {
+                    var author = getRandomItem(users);
+                    var category = getRandomItem(categories);
+                    var status = getRandomItem(statuses);
+                    var title = getRandomItem(sampleTitles);
+                    
+                    var post = {
+                        title: title + ' #' + (i + 1),
+                        content: 'Nội dung chi tiết cho bài viết về ' + category + '. Đây là bài viết số ' + (i + 1) + ' trong series demo.',
+                        category: category,
+                        status: status,
+                        authorId: author.id,
+                        authorName: author.name,
+                        createdAt: new Date(),
+                        tags: [category, 'demo', 'bulk'],
+                        viewCount: Math.floor(Math.random() * 200),
+                        likeCount: Math.floor(Math.random() * 50)
+                    };
+                    
+                    if (status === 'published') {
+                        post.publishedAt = new Date();
+                    }
+                    
+                    bulkPosts.push(post);
+                }
+                
+                clearOutput('post-output');
+                log('Adding ' + bulkPosts.length + ' posts...', 'info', 'post-output');
+                
+                var promises = bulkPosts.map(function(post) {
+                    return window.dbUtil.add('posts', post);
+                });
+                
+                return Promise.all(promises).then(function() {
+                    log('✅ Successfully added ' + bulkPosts.length + ' posts!', 'success', 'post-output');
+                    updateStats();
+                });
+            }).catch(function(error) {
+                log('❌ Error bulk adding posts: ' + error.message, 'error', 'post-output');
+            });
+        };
+        
+        // Advanced operations
+        window.queryWithLimit = async function() {
+            if (!dbUtil) {
+                log('❌ Database not initialized!', 'error', 'advanced-output');
+                return;
+            }
+            
+            try {
+                clearOutput('advanced-output');
+                log('🔍 Query with limit and offset:', 'info', 'advanced-output');
+                
+                const limit = 3;
+                const offset = 0;
+                
+                const users = await dbUtil.query('users', { limit, offset });
+                log(`Getting first $1 users:`, 'info', 'advanced-output');
+                users.forEach(user => {
+                    log(`- ${user.name} (${user.email})`, 'info', 'advanced-output');
+                });
+                
+                const posts = await dbUtil.query('posts', { limit: 2, offset: 1 });
+                log(`Getting 2 posts from position 2:`, 'info', 'advanced-output');
+                posts.forEach(post => {
+                    log(`- "${post.title}" by ${post.authorName}`, 'info', 'advanced-output');
+                });
+            } catch (error) {
+                log(`❌ Error querying with limit: ${error.message}`, 'error', 'advanced-output');
+            }
+        };
+        
+        window.queryByIndex = async function() {
+            if (!dbUtil) {
+                log('❌ Database not initialized!', 'error', 'advanced-output');
+                return;
+            }
+            
+            try {
+                clearOutput('advanced-output');
+                log('🔍 Query by index:', 'info', 'advanced-output');
+                
+                // Query users by role
+                const adminUsers = await dbUtil.query('users', { index: 'role' });
+                const admins = adminUsers.filter(u => u.role === 'admin');
+                log(`Admins: ${admins.length} người`, 'info', 'advanced-output');
+                
+                // Query posts by category
+                const techPosts = await dbUtil.query('posts', { index: 'category' });
+                const technology = techPosts.filter(p => p.category === 'technology');
+                log(`Posts về technology: ${technology.length} bài`, 'info', 'advanced-output');
+                
+                // Query by status with direction
+                const publishedPosts = await dbUtil.query('posts', { 
+                    index: 'status',
+                    direction: 'prev' // Newest first
+                });
+                const published = publishedPosts.filter(p => p.status === 'published');
+                log(`published posts (mới nhất trước): ${published.length} bài`, 'info', 'advanced-output');
+            } catch (error) {
+                log(`❌ Lỗi Query by index: ${error.message}`, 'error', 'advanced-output');
+            }
+        };
+        
+        window.countRecords = async function() {
+            if (!dbUtil) {
+                log('❌ Database not initialized!', 'error', 'advanced-output');
+                return;
+            }
+            
+            try {
+                clearOutput('advanced-output');
+                log('🔢 Đếm records:', 'info', 'advanced-output');
+                
+                const userCount = await dbUtil.count('users');
+                const postCount = await dbUtil.count('posts');
+                
+                log(`Total users: ${userCount}`, 'info', 'advanced-output');
+                log(`Total posts: ${postCount}`, 'info', 'advanced-output');
+                
+                // Count with filters (manual for demo)
+                const users = await dbUtil.getAll('users');
+                const posts = await dbUtil.getAll('posts');
+                
+                const adminCount = users.filter(u => u.role === 'admin').length;
+                const publishedCount = posts.filter(p => p.status === 'published').length;
+                const draftCount = posts.filter(p => p.status === 'draft').length;
+                
+                log(`Admin users: ${adminCount}`, 'info', 'advanced-output');
+                log(`Published posts: ${publishedCount}`, 'info', 'advanced-output');
+                log(`Draft posts: ${draftCount}`, 'info', 'advanced-output');
+            } catch (error) {
+                log(`❌ Lỗi đếm records: ${error.message}`, 'error', 'advanced-output');
+            }
+        };
+        
+        window.transactionDemo = async function() {
+            if (!dbUtil) {
+                log('❌ Database not initialized!', 'error', 'advanced-output');
+                return;
+            }
+            
+            try {
+                clearOutput('advanced-output');
+                log('🔄 Transaction demo:', 'info', 'advanced-output');
+                
+                const tx = dbUtil.transaction(['users', 'posts'], 'readwrite');
+                
+                log('Bắt đầu transaction...', 'info', 'advanced-output');
+                
+                const usersStore = await tx.getStore('users');
+                const postsStore = await tx.getStore('posts');
+                
+                log('Đã lấy được stores từ transaction', 'info', 'advanced-output');
+                
+                // Simulate some operations
+                const userCount = await DB.countObjectData(usersStore);
+                const postCount = await DB.countObjectData(postsStore);
+                
+                log(`Users trong transaction: ${userCount}`, 'info', 'advanced-output');
+                log(`Posts trong transaction: ${postCount}`, 'info', 'advanced-output');
+                
+                await tx.commit();
+                log('✅ Transaction hoàn thành thành công!', 'success', 'advanced-output');
+            } catch (error) {
+                log(`❌ Lỗi transaction: ${error.message}`, 'error', 'advanced-output');
+            }
+        };
+        
+        window.performanceTest = async function() {
+            if (!dbUtil) {
+                log('❌ Database not initialized!', 'error', 'advanced-output');
+                return;
+            }
+            
+            try {
+                clearOutput('advanced-output');
+                log('⚡ Test performance:', 'info', 'advanced-output');
+                
+                const startTime = performance.now();
+                
+                // Test bulk operations
+                const testUsers = [];
+                for (let i = 0; i < 50; i++) {
+                    testUsers.push({
+                        name: `TestUser${i}`,
+                        email: `test${i}@example.com`,
+                        age: 20 + (i % 50),
+                        role: i % 3 === 0 ? 'admin' : 'user',
+                        createdAt: new Date()
+                    });
+                }
+                
+                const bulkStartTime = performance.now();
+                const keys = await dbUtil.bulkAdd('users', testUsers);
+                const bulkEndTime = performance.now();
+                
+                log(`✅ Thêm ${keys.length} users trong ${(bulkEndTime - bulkStartTime).toFixed(2)}ms`, 'success', 'advanced-output');
+                
+                // Test query performance
+                const queryStartTime = performance.now();
+                const allUsers = await dbUtil.getAll('users');
+                const queryEndTime = performance.now();
+                
+                log(`✅ Query ${allUsers.length} users trong ${(queryEndTime - queryStartTime).toFixed(2)}ms`, 'success', 'advanced-output');
+                
+                // Test index query
+                const indexStartTime = performance.now();
+                const indexUsers = await dbUtil.query('users', { index: 'role' });
+                const indexEndTime = performance.now();
+                
+                log(`✅ Index query ${indexUsers.length} users trong ${(indexEndTime - indexStartTime).toFixed(2)}ms`, 'success', 'advanced-output');
+                
+                const totalTime = performance.now() - startTime;
+                log(`🏁 Tổng thời gian test: ${totalTime.toFixed(2)}ms`, 'info', 'advanced-output');
+                
+                await updateStats();
+            } catch (error) {
+                log(`❌ Lỗi performance test: ${error.message}`, 'error', 'advanced-output');
+            }
+        };
+        
+        window.clearAllData = async function() {
+            if (!dbUtil) {
+                log('❌ Database not initialized!', 'error', 'advanced-output');
+                return;
+            }
+            
+            try {
+                clearOutput('advanced-output');
+                await dbUtil.clear('users');
+                await dbUtil.clear('posts');
+                
+                log('✅ All data cleared!', 'success', 'advanced-output');
+                await updateStats();
+            } catch (error) {
+                log(`❌ Error clearing data: ${error.message}`, 'error', 'advanced-output');
+            }
+        };
+        
+        // Statistics
+        function updateStats() {
+            var statsDiv = document.getElementById('stats');
+            
+            if (!window.dbUtil) {
+                statsDiv.innerHTML = '<div class="stat-card"><div class="stat-number">❌</div><div class="stat-label">Database not initialized</div></div>';
+                return;
+            }
+            
+            Promise.all([
+                window.dbUtil.count('users'),
+                window.dbUtil.count('posts'),
+                window.dbUtil.getAll('users'),
+                window.dbUtil.getAll('posts')
+            ]).then(function(results) {
+                var userCount = results[0];
+                var postCount = results[1];
+                var users = results[2];
+                var posts = results[3];
+                
+                var adminCount = users.filter(function(u) { return u.role === 'admin'; }).length;
+                var publishedCount = posts.filter(function(p) { return p.status === 'published'; }).length;
+                var draftCount = posts.filter(function(p) { return p.status === 'draft'; }).length;
+                
+                statsDiv.innerHTML = 
+                    '<div class="stat-card">' +
+                        '<div class="stat-number">' + userCount + '</div>' +
+                        '<div class="stat-label">Total Users</div>' +
+                    '</div>' +
+                    '<div class="stat-card">' +
+                        '<div class="stat-number">' + adminCount + '</div>' +
+                        '<div class="stat-label">Admin Users</div>' +
+                    '</div>' +
+                    '<div class="stat-card">' +
+                        '<div class="stat-number">' + postCount + '</div>' +
+                        '<div class="stat-label">Total Posts</div>' +
+                    '</div>' +
+                    '<div class="stat-card">' +
+                        '<div class="stat-number">' + publishedCount + '</div>' +
+                        '<div class="stat-label">Published Posts</div>' +
+                    '</div>' +
+                    '<div class="stat-card">' +
+                        '<div class="stat-number">' + draftCount + '</div>' +
+                        '<div class="stat-label">Draft Posts</div>' +
+                    '</div>' +
+                    '<div class="stat-card">' +
+                        '<div class="stat-number">' + window.dbConfig.stores.length + '</div>' +
+                        '<div class="stat-label">Object Stores</div>' +
+                    '</div>';
+            }).catch(function(error) {
+                statsDiv.innerHTML = '<div class="stat-card"><div class="stat-number">❌</div><div class="stat-label">Error getting statistics</div></div>';
+            });
+        }
+        
+        // Initialize the demo
+        document.addEventListener('DOMContentLoaded', function() {
+            checkCompatibility();
+            updateStats();
+            
+            // Auto-init database after a short delay
+            setTimeout(function() {
+                if (isIndexedDBSupported()) {
+                    window.initDatabase();
+                }
+            }, 1000);
+        });
+        
+    </script>
+</body>
+</html>

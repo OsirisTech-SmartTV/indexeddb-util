@@ -402,3 +402,7 @@ For support and questions, please open an issue on [GitHub Issues](https://githu
 ---
 
 ### Made with ❤️ by Osiris Smart TV Team
+
+<a href="https://www.buymeacoffee.com/tconns94" target="_blank">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="200"/>
+</a>
